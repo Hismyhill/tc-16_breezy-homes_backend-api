@@ -1,155 +1,146 @@
 import Shortlet from "../models/shortletModel.js";
 import Review from "../models/reviewModel.js";
-import {
-  sendError,
-  sendSuccess,
-  sendSuccessWithPayload,
-} from "../utils/helpers.js";
+import User from "../models/userModel.js";
+import { sendError } from "../utils/helpers.js";
+import { uploadImages } from "../utils/imageUploader.js";
 
-export async function addShortlet(req, res) {
+export async function addShortlet({
+  res,
+  userId,
+  title,
+  description,
+  price,
+  images,
+}) {
   try {
-    const { title, price, description, image } = req.body;
+    const user = await User.findByPk(userId);
 
-    if ((!title, !price, !description, !image)) {
-      sendError({ res, code: 401, message: "Missing credentials" });
-    } else {
-      const shortlet = await Shortlet.create({
-        title,
-        price,
-        image,
-        description,
+    if (!user) {
+      sendError({ res, code: 404, message: "User not found" });
+      return;
+    }
+
+    // Upload images
+    const uploadedImages = await uploadImages(images);
+
+    if (!uploadedImages || uploadedImages.length !== 3)
+      sendError({
+        res,
+        code: 400,
+        message: "Failed to upload images. Please try again.",
       });
 
-      if (!shortlet) {
-        sendError({
-          res,
-          code: 400,
-          message: "Shortlet could not be created",
-        });
-      }
+    // Create shortlet object
+    let newShortlet = {
+      userId,
+      title,
+      description,
+      price,
+      images: uploadedImages,
+    };
 
-      sendSuccessWithPayload(
-        {
-          res,
-          message: "Shortlet created successfully",
-          key: "shortlet",
-        },
-        shortlet
-      );
-    }
+    newShortlet = await Shortlet.create(newShortlet);
+
+    return newShortlet;
   } catch (error) {
     console.log(error);
     sendError({ res });
   }
 }
 
-export async function getAllShortlets(req, res) {
+export async function getAllUserShortlets({ res, userId }) {
   try {
-    const shortlets = await Shortlet.findAll({});
-    // attributes: [
-    //   "title",
-    //   "price"
-    // ]
-    if (shortlets.length === 0) {
+    const userWithShortlets = await User.findByPk(userId, {
+      include: [
+        {
+          model: Shortlet,
+          as: "shortlets",
+        },
+      ],
+    });
+
+    if (userWithShortlets.shortlets.length === 0) {
       sendError({
         res,
         code: 404,
-        message: "Ops! No shortlet found. Start adding shortlets now!",
+        message: "No shortlet available for this user",
       });
-    } else {
-      sendSuccessWithPayload(
-        { res, message: "Products fetched successfully", key: "shortlets" },
-        shortlets
-      );
+      return;
     }
+
+    return userWithShortlets.shortlets;
   } catch (error) {
     console.log(error);
     sendError({ res });
   }
 }
 
-export async function getSingleShortlet(req, res) {
+export async function getShortlet({ res, shortletId }) {
   try {
-    const shortletId = req.params.shortletId;
-
     const shortlet = await shortlet.findByPk(shortletId);
 
     if (!shortlet) {
       sendError({ res, code: 404, message: "Shortlet not found" });
+      return;
     }
 
-    return sendSuccessWithPayload(
-      {
-        res,
-        message: "Shortlet fetched successfully",
-        key: "shortlet",
-      },
-      shortlet
-    );
+    return shortlet;
   } catch (error) {
     console.log(error);
     sendError({ res });
   }
 }
 
-export async function updateShortlet(req, res) {
+export async function updateShortlet({ res, shortletId }) {
   try {
-    const shortletId = req.params.shortletId;
-
     const shortlet = await shortlet.findByPk(shortletId);
 
     if (!shortlet) {
       sendError({ res, code: 404, message: "Shortlet not found" });
+      return;
     }
 
-    await Shortlet.update(req.body, { where: { id: productId } });
-    return sendSuccess({ res, message: "Product updated successfully" });
+    return await Shortlet.update(req.body, { where: { id: productId } });
   } catch (error) {
     console.log(error);
     sendError({ res });
   }
 }
 
-export async function deleteShortlet(req, res) {
+export async function deleteShortlet({ res, shortletId }) {
   try {
-    const shortletId = req.params.shortletId;
-
     let shortlet = await Shortlet.findByPk(shortletId);
 
     if (!shortlet) {
       sendError({ res, code: 404, message: "Shortlet not found" });
-    } else {
-      await Product.destroy({ where: { id: productId } });
-      return sendSuccess({ res, message: "Product deleted successfully" });
+      return;
     }
+
+    await Product.destroy({ where: { id: productId } });
   } catch (error) {
     console.log(error);
     sendError({ res });
   }
 }
 
-export async function getAllListedShortlet(req, res) {
+export async function getAllListedShortlet({ res }) {
   try {
     const shortlet = await Shortlet.findAll({ where: { listed: true } });
 
     if (!shortlet) {
       sendError({ res, code: 404, message: "Product not found" });
+      return;
     }
 
-    sendSuccessWithPayload(
-      { res, message: "Products fetched successfully", key: "shortlet" },
-      shortlet
-    );
+    return shortlet;
   } catch (error) {
     console.log(error);
     sendError({ res });
   }
 }
 
-export async function getAllShortletReviews(req, res) {
+export async function getAllShortletReviews({ shortletId, res }) {
   try {
-    const shortletId = req.params.shortletId;
-
     const shortletReviews = await Shortlet.findByPk(shortletId, {
       include: [
         {
@@ -159,18 +150,36 @@ export async function getAllShortletReviews(req, res) {
       ],
     });
 
-    if (!shortletReviews || shortletReviews?.length === 0) {
+    if (!shortletReviews.reviews || shortletReviews.reviews.length === 0) {
       sendError({
         res,
         code: 404,
         message: "No reviews available for this product",
       });
+      return;
     }
 
-    sendSuccessWithPayload(
-      { res, message: "Reviews fetched successfully", key: "shortletReviews" },
-      shortletReviews
-    );
+    return shortletReviews.reviews;
+  } catch (error) {
+    console.log(error);
+    sendError({ res });
+  }
+}
+
+export async function getAllShortlets({ res }) {
+  try {
+    const shortlets = await Shortlet.findAll({});
+
+    if (!shortlets || shortlets?.length === 0) {
+      sendError({
+        res,
+        code: 404,
+        message: "No shortlet available",
+      });
+      return;
+    }
+
+    return shortletReviews.reviews;
   } catch (error) {
     console.log(error);
     sendError({ res });

@@ -1,6 +1,10 @@
 import Product from "../models/productModel.js";
 import Review from "../models/reviewModel.js";
-import { sendError, sendSuccess } from "../utils/helpers.js";
+import {
+  sendError,
+  sendSuccess,
+  sendSuccessWithPayload,
+} from "../utils/helpers.js";
 
 export async function createReview(req, res) {
   try {
@@ -10,13 +14,15 @@ export async function createReview(req, res) {
     const shortlet = await Product.findByPk(shortletId);
 
     if (!shortlet) {
-      sendError({ res, code: 404, message: "Product not found" });
+      sendError({ res, code: 404, message: "Shortlet not found" });
+      return;
     }
 
     const review = await shortlet.createReview({ rating, comment });
 
     if (!review) {
       sendError({ res, code: 401, message: "Review not created" });
+      return;
     }
 
     return sendSuccess({
@@ -36,11 +42,10 @@ export async function getShortletReviews(req, res) {
     const product = await Product.findByPk(productId);
 
     if (!product) {
-      res.status(404).json({
-        success: false,
-        message: "No product found",
-      });
+      sendError({ res, code: 401, message: "Product not found" });
+      return;
     }
+
     const productWithReviews = await Product.findByPk(productId, {
       include: [
         {
@@ -51,21 +56,21 @@ export async function getShortletReviews(req, res) {
     });
 
     if (productWithReviews.reviews.length === 0) {
-      res.status(404).json({
-        success: false,
+      sendError({
+        res,
+        code: 401,
         message: "No reviews available for this product",
-        data: [],
       });
-    } else {
-      res.status(200).json({
-        success: true,
-        message: "Reviews fetched successfully",
-        data: productWithReviews.reviews,
-      });
+      return;
     }
+
+    sendSuccessWithPayload(
+      { res, message: "Reviews fetched successfully" },
+      productWithReviews.reviews
+    );
   } catch (error) {
     console.log(error);
-    next(error);
+    sendError({ res });
   }
 }
 
@@ -81,7 +86,7 @@ export async function getAllReviews(req, res) {
       });
     }
 
-    return sendSuccess(
+    return sendSuccessWithPayload(
       { res, message: "Reviews fetched successfully" },
       reviews
     );

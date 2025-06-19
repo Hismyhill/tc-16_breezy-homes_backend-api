@@ -1,34 +1,40 @@
-import { sendError } from "../utils/helpers.js";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+dotenv.config();
+import { sendError } from "../utils/helpers.js";
 
 export function verifyToken(req, res, next) {
   try {
-    const token =
-      req.body.token || req.query.token || req.headers["x-access-token"];
+    const { token } = req.headers;
+    // req.body.token || req.query.token || req.headers["x-access-token"];
 
     if (!token) {
-      return sendError({
+      sendError({
         res,
         message: "Access denied! No token provided",
         code: 401,
       });
+
+      return;
     }
 
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
+    console.log(decodedToken);
     req.user = decodedToken;
+
+    next();
   } catch (error) {
     console.log(error);
     sendError({ res });
   }
-
-  return next();
 }
 
 export function authorizeRoles(...allowedRoles) {
   return (req, res, next) => {
-    if (!allowedRoles.includes(req.user.role)) {
-      return sendError({ code: 403, message: "Access denied!" });
+    if (!allowedRoles.includes(req.user.roles)) {
+      sendError({ code: 403, message: "Access denied!" });
+      return;
     }
 
     next();

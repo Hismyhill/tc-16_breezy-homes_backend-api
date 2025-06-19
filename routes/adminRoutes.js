@@ -1,9 +1,8 @@
 import express from "express";
 import adminMiddleware from "../middlewares/adminMiddleware.js";
-import { registerUser } from "../controllers/userController.js";
 
-const router = express.Router();
+const adminRouter = express.Router();
 
-router.post("/add-user", adminMiddleware, registerUser);
+adminRouter.post("/add-user", adminMiddleware, async (req, res) => {});
 
-export default router;
+export default adminRouter;

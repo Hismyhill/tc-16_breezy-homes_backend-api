@@ -15,8 +15,8 @@ const corOptions = {
 
 app.use(express.json()); // Ensure this is applied before routes
 app.use(cors(corOptions));
-app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1", routes);
 
