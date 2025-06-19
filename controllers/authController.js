@@ -7,7 +7,7 @@ import { sendVerificationEmail } from "./emailVerificationController.js";
 import { hashData, sendError, verifyHashedData } from "../utils/helpers.js";
 
 // Ignore self-signed certificates during development
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 export async function registerUser({
   res,
