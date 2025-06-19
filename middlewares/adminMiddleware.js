@@ -18,7 +18,7 @@ async function authAdmin(req, res, next) {
     if (decodedToken !== process.env.ADMIN_EMAIL + process.env.ADMIN_PASSWORD) {
       return sendError({
         res,
-        code: 400,
+        code: 403,
         message: "Not authorized to access this page.",
       });
     } else {

@@ -6,32 +6,31 @@ import {
   hashData,
   sendError,
   sendSuccessWithPayload,
+  verifyHashedData,
 } from "../utils/helpers.js";
 
-export async function sendOtp(req, res) {
+export async function sendOTP({ res, email, subject, message, duration = 6 }) {
   try {
-    const { email, subject, message, duration } = req.body;
-
-    if (!(email && subject && message)) {
-      sendError({
-        res,
-        code: 400,
-        message: "Provide values for email, subject and message",
-      });
-    }
-
     await OTP.destroy({ where: { email } });
 
     const generatedOTP = await generateOTP();
 
     let transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
+      host: process.env.SMTP_HOST,
       port: 465,
       secure: true,
       auth: {
         user: process.env.SUPER_ADMIN_EMAIL,
         pass: process.env.SUPER_ADMIN_PASSWORD,
       },
+    });
+
+    transporter.verify((error, success) => {
+      if (error) console.log(error);
+      else {
+        console.log("Ready for messages");
+        console.log(success);
+      }
     });
 
     const mailOptions = {
@@ -54,26 +53,46 @@ export async function sendOtp(req, res) {
 
     const createdOTPRecord = await newOTP.save();
 
-    sendSuccessWithPayload(
-      {
-        res,
-        message:
-          "A OTP has been sent to your registered email. Check your mail",
-        key: "OTPRecord",
-      },
-      createdOTPRecord
-    );
+    return createdOTPRecord;
   } catch (error) {
     console.log(error);
-    sendError({ res });
+    sendError({ res, message: error.message });
   }
 }
 
-// transporter.verify((error, success) => {
-//   if (error) {
-//     console.log(error);
-//   } else {
-//     console.log("ready for messages");
-//     console.log(success);
-//   }
-// });
+export async function verifyOTP({ res, email, otp }) {
+  try {
+    const matchedOTPRecord = await OTP.findOne({ where: { email } });
+
+    if (!matchedOTPRecord) {
+      sendError({ res, message: "No OTP record found." });
+      return;
+    }
+
+    const { expiresAt } = matchedOTPRecord;
+
+    if (expiresAt < Date.now()) {
+      await OTP.destroy({ email });
+      return sendError({
+        res,
+        message: "Code has expired. Request for a new one.",
+      });
+    }
+    const hashedOtp = matchedOTPRecord.otp;
+
+    const ValidOtp = await verifyHashedData(otp, hashedOtp);
+
+    return ValidOtp;
+  } catch (error) {
+    console.log(error);
+    sendError({ res, message: error.message });
+  }
+}
+
+export async function deleteOTP(email) {
+  try {
+    await OTP.destroy({ where: { email } });
+  } catch (error) {
+    console.log(error);
+  }
+}
