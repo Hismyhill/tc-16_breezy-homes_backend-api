@@ -33,6 +33,19 @@ export function sendError({
   });
 }
 
+export function sendErrorWithPayload({
+  res,
+  code = 400,
+  message,
+  key,
+  payload,
+}) {
+  res.status(code).json({
+    success: true,
+    message,
+    [key]: payload,
+  });
+}
 export async function generateOTP() {
   try {
     const otp = `${1000 + Math.floor(Math.random() * 9000)}`;
