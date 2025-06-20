@@ -4,7 +4,7 @@ import { Sequelize } from "sequelize";
 dotenv.config();
 
 const sequelize = new Sequelize(
-  process.env.DB_URL,
+  process.env.DATABSE_URL,
   {
     dialect: process.env.DB_DIALECT || "mysql",
     logging: Boolean(process.env.DB_LOGGING),
