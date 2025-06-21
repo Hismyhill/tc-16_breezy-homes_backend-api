@@ -7,7 +7,7 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Breezy Homes API Docds",
+      title: "Breezy Homes API Docs",
       version: "1.0.0",
       description: "A REST API with JWT Authentication and RBAC",
       contact: {
