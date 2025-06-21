@@ -4,11 +4,14 @@ import { Sequelize } from "sequelize";
 dotenv.config();
 
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
+
   host: process.env.DB_HOST,
+
   dialect: process.env.DB_DIALECT || "mysql",
   dialectOptions: {
     ssl: {
       require: true,
+
       rejectUnauthorized: false,
     },
   },
@@ -41,5 +44,13 @@ export const connectDB = async () => {
     process.exit(1);
   }
 };
+
+      rejectUnauthorized: false, // Disable SSL validation
+    },
+  },
+  logging: Boolean(process.env.DB_LOGGING),
+});
+
+
 
 export default sequelize;
