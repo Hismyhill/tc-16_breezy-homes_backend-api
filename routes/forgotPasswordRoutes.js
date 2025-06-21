@@ -11,6 +11,34 @@ import {
 
 const forgotPasswordRouter = express.Router();
 
+/**
+ * @swagger
+ * /forgot_password/:
+ *   post:
+ *     summary: Request an OTP for password reset
+ *     tags:
+ *       - Forgot Password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully. Check your inbox.
+ *       400:
+ *         description: Email is required
+ *       500:
+ *         description: Internal server error
+ */
+
 forgotPasswordRouter.post("/", async (req, res) => {
   try {
     const { email } = req.body;
@@ -22,7 +50,7 @@ forgotPasswordRouter.post("/", async (req, res) => {
         message: "Email is required",
       });
     }
-    const createdForgotPasswordOTP = await forgotPasswordOTP(email);
+    const createdForgotPasswordOTP = await forgotPasswordOTP({ res, email });
 
     return sendSuccessWithPayload(
       { res, message: "OTP sent successfully. Check your inbox." },
@@ -34,19 +62,55 @@ forgotPasswordRouter.post("/", async (req, res) => {
   }
 });
 
-export default forgotPasswordRouter;
+/**
+ * @swagger
+ * /forgot_password/reset:
+ *   post:
+ *     summary: Reset user password using OTP
+ *     tags:
+ *       - Forgot Password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: "user@example.com"
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
+ *               newPassword:
+ *                 type: string
+ *                 example: "newSecurePassword123"
+ *     responses:
+ *       200:
+ *         description: Password was reset successfully.
+ *       400:
+ *         description: All fields are required
+ *       500:
+ *         description: Internal server error
+ */
 
 forgotPasswordRouter.post("/reset", async (req, res) => {
   try {
     let { email, otp, newPassword } = req.body;
 
     if (!(email && newPassword && otp))
-      throw new Error("All fields are required");
+      sendError({ res, code: 400, message: "All fields are required" });
 
-    await resetUserPassword({ email, newPassword, otp });
+    await resetUserPassword({ res, email, newPassword, otp });
     sendSuccess({ res, message: "Password was reset successfully." });
   } catch (error) {
     console.log(error);
     sendError({ res, message: error.message });
   }
 });
+
+export default forgotPasswordRouter;

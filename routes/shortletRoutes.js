@@ -13,6 +13,52 @@ import uploadMiddleware from "../middlewares/upload-middleware.js";
 
 const shortletRouter = express.Router();
 
+/**
+ * @swagger
+ * /add-shortlet:
+ *   post:
+ *     summary: Add a new shortlet
+ *     tags:
+ *       - Shortlet
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - price
+ *               - images
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: "Luxury Apartment"
+ *               description:
+ *                 type: string
+ *                 example: "A beautiful apartment in the city center."
+ *               price:
+ *                 type: number
+ *                 example: 150
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Shortlet added successfully
+ *       400:
+ *         description: Request body is missing
+ *       401:
+ *         description: Empty fields are not allowed
+ *       500:
+ *         description: Internal server error
+ */
+
 shortletRouter.post(
   "/add-shortlet",
   verifyToken,
@@ -53,6 +99,31 @@ shortletRouter.post(
   }
 );
 
+/**
+ * @swagger
+ * /{shortletId}:
+ *   get:
+ *     summary: Fetch a shortlet by ID
+ *     tags:
+ *       - Shortlet
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: shortletId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "12345"
+ *     responses:
+ *       200:
+ *         description: Shortlet fetched successfully
+ *       401:
+ *         description: Unauthorized access
+ *       500:
+ *         description: Internal server error
+ */
+
 shortletRouter.get("/:shortletId", authorizeRoles("host"), async (req, res) => {
   try {
     const shortletId = req.params.shortletId;
@@ -72,6 +143,24 @@ shortletRouter.get("/:shortletId", authorizeRoles("host"), async (req, res) => {
     sendError({ res });
   }
 });
+
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Fetch all shortlets for the user
+ *     tags:
+ *       - Shortlet
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Reviews fetched successfully
+ *       401:
+ *         description: Product not found
+ *       500:
+ *         description: Internal server error
+ */
 
 shortletRouter.get("/", authorizeRoles("host"), async (req, res) => {
   try {
@@ -94,6 +183,51 @@ shortletRouter.get("/", authorizeRoles("host"), async (req, res) => {
     sendError({ res });
   }
 });
+
+/**
+ * @swagger
+ * /{shortletId}/edit:
+ *   put:
+ *     summary: Update a shortlet by ID
+ *     tags:
+ *       - Shortlet
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: shortletId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "12345"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - price
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: "Updated Luxury Apartment"
+ *               description:
+ *                 type: string
+ *                 example: "An updated description of the apartment."
+ *               price:
+ *                 type: number
+ *                 example: 200
+ *     responses:
+ *       200:
+ *         description: Shortlet updated successfully
+ *       401:
+ *         description: Shortlet ID is required
+ *       500:
+ *         description: Internal server error
+ */
 
 shortletRouter.put("/:shortletId/edit", async (req, res) => {
   try {

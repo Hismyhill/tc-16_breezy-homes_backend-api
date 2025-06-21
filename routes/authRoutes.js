@@ -1,63 +1,144 @@
 import express from "express";
 
-import uploadMiddleware from "../middlewares/upload-middleware.js";
+import { body } from "express-validator";
 import { loginUser, registerUser } from "../controllers/authController.js";
 import { sendError, sendSuccessWithPayload } from "../utils/helpers.js";
 
 const authRouter = express.Router();
 
-authRouter.post(
-  "/register",
-  uploadMiddleware.single("image"),
-  async (req, res) => {
-    try {
-      let { firstName, lastName, email, password, roles } = req.body;
+// Validation middleware
+const registerValidation = [
+  body("firstName")
+    .trim()
+    .isLength({ min: 3, max: 30 })
+    .withMessage("Username must be between 3 and 30 characters"),
+  body("lastName")
+    .trim()
+    .isLength({ min: 3, max: 30 })
+    .withMessage("Username must be between 3 and 30 characters"),
+  body("email").isEmail().withMessage("Please provide a valid email"),
+  body("password")
+    .isLength({ min: 8 })
+    .withMessage("Password must be at least 8 characters long"),
+];
 
-      firstName = firstName.trim();
-      lastName = lastName.trim();
-      email = email.trim();
-      password = password.trim();
+const loginValidation = [
+  body("email").isEmail().withMessage("Please provide a valid email"),
+  body("password").notEmpty().withMessage("Password is required"),
+];
 
-      // Check if the fields are empty
-      if (!(firstName && lastName && email && password)) {
-        // sendError({ res, message: "Missing credentials" });
-        sendError({ res, message: "Missing credentials" });
-        return;
-      } else if (
-        !(/^[a-zA-Z]*$/.test(firstName) && /^[a-zA-Z]*$/.test(lastName))
-      ) {
-        sendError({ res, message: "Invalid name entered" });
-        return;
-      } else if (!/^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
-        sendError({ res, message: "Enter a valid email address" });
-        return;
-      } else if (password.lenth > 8) {
-        sendError({
-          res,
-          message: "Password too short! Password must be atleast 8 characters",
-        });
-        return;
-      }
+const passwordValidation = [
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters long"),
+];
 
-      const newUser = await registerUser({
-        res,
-        firstName,
-        lastName,
-        email,
-        password,
-        roles,
-      });
+const changePasswordValidation = [
+  body("newPassword")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters long"),
+  body("currentPassword")
+    .notEmpty()
+    .withMessage("Please enter your current password"),
+];
 
-      sendSuccessWithPayload(
-        { res, message: "User registered successfully", key: "newUser" },
-        newUser
-      );
-    } catch (error) {
-      console.log(error);
-      sendError({ res });
-    }
+/**
+ * @swagger
+ * /user/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 example: "Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john.doe@example.com"
+ *               password:
+ *                 type: string
+ *                 example: "securePassword123"
+ *               roles:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [guest, host, helper]
+ *                 example: ["guest"]
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Validation error
+ */
+
+authRouter.post("/register", registerValidation, async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, roles } = req.body;
+
+    const newUser = await registerUser({
+      res,
+      firstName,
+      lastName,
+      email,
+      password,
+      roles,
+    });
+    return sendSuccessWithPayload(
+      { res, message: "User registered successfully", key: "newUser" },
+      newUser
+    );
+  } catch (error) {
+    console.log(error);
+    sendError({ res });
   }
-);
+});
+
+/**
+ * @swagger
+ * /user/login:
+ *   post:
+ *     summary: Login a user
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "john.doe@example.com"
+ *               password:
+ *                 type: string
+ *                 example: "securePassword123"
+ *     responses:
+ *       200:
+ *         description: User logged in successfully
+ *       401:
+ *         description: Field is required
+ */
 
 authRouter.get("/login", async (req, res) => {
   try {
@@ -86,5 +167,37 @@ authRouter.get("/login", async (req, res) => {
     sendError({ res });
   }
 });
+
+/**
+ * @swagger
+ * /user/reset-password:
+ *   post:
+ *     summary: Change the password of a user
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: "oldPassword123"
+ *               newPassword:
+ *                 type: string
+ *                 example: "newSecurePassword123"
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ */
 
 export default authRouter;

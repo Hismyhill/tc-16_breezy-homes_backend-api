@@ -6,8 +6,10 @@ import User from "../models/userModel.js";
 import { sendVerificationEmail } from "./emailVerificationController.js";
 import { hashData, sendError, verifyHashedData } from "../utils/helpers.js";
 
-// Ignore self-signed certificates during development
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// Set NODE_TLS_REJECT_UNAUTHORIZED to "0" only in development phase
+if (process.env.NODE_ENV === "development") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 export async function registerUser({
   res,

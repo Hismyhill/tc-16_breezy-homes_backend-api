@@ -32,14 +32,13 @@ export async function addShortlet({
 
     // Create shortlet object
     let newShortlet = {
-      userId,
       title,
       description,
       price,
       images: uploadedImages,
     };
 
-    newShortlet = await Shortlet.create(newShortlet);
+    newShortlet = await User.createShortlet(newShortlet);
 
     return newShortlet;
   } catch (error) {
